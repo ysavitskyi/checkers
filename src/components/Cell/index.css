@@ -1,0 +1,16 @@
+.cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: pink;
+}
+
+.cell--highlighted {
+  background-color: gold;
+}
+
+.cell--empty {
+  background-color: #fff;
+  color: #fff;
+}
