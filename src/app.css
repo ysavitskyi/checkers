@@ -25,6 +25,10 @@
   background-color: pink;
 }
 
+.cell--highlighted {
+  background-color: gold;
+}
+
 .cell--empty {
   background-color: #fff;
   color: #fff;
@@ -45,6 +49,10 @@
       red 2px,
       red 4px
     );
+}
+
+.cell--disabled .piece {
+  cursor: default;
 }
 
 .piece {
