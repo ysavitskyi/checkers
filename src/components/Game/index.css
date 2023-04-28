@@ -1,0 +1,12 @@
+.game {
+  display: flex;
+  padding: 1em 0;
+}
+
+.game-col {
+  width: 50%;
+}
+
+.game-col--right {
+  padding-left: 1em;
+}

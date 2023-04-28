@@ -1,8 +1,8 @@
-import Grid from 'components/Grid'
-import './app.css'
+import Game from 'components/Game'
+import './styles/app.css'
 
 const App: React.FC = () => {
-  return <Grid />
+  return <Game />
 }
 
 export default App

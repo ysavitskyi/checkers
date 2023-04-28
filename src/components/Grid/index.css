@@ -1,8 +1,4 @@
 .grid-wrapper {
-  width: 50%;
-}
-
-.grid-wrapper-in {
   position: relative;
   padding-bottom: 100%;
 }
