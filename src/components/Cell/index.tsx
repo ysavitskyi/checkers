@@ -14,17 +14,21 @@ const Cell: React.FC<{
 }> = ({ id, isEmpty, occupied, isActive, disabled, highlighted, onClick }) => {
   const onCellClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
-      onClick(id)
+      if (highlighted) {
+        onClick(id)
+      }
     },
-    [id, onClick]
+    [id, onClick, highlighted]
   )
 
   const onPieceClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
-      onClick(id, true)
-      event.stopPropagation()
+      if (!disabled) {
+        onClick(id, true)
+        event.stopPropagation()
+      }
     },
-    [id, onClick]
+    [id, onClick, disabled]
   )
 
   return isEmpty ? (
@@ -32,15 +36,28 @@ const Cell: React.FC<{
   ) : (
     <div
       className={composeCls(['cell'], {
-        'cell--active': isActive,
-        'cell--disabled': disabled,
         'cell--highlighted': highlighted,
       })}
       onClick={onCellClick}
     >
       {occupied && (
-        <Piece onClick={onPieceClick} isWhite={occupied === 'player1'} />
+        <Piece
+          onClick={onPieceClick}
+          isWhite={occupied === 'player1'}
+          isActive={isActive}
+          disabled={disabled}
+        />
       )}
+      {/* for debugging purposes */}
+      {/* <sub
+        style={{
+          position: 'absolute',
+          color: 'green',
+          pointerEvents: 'none',
+        }}
+      >
+        {id}
+      </sub> */}
     </div>
   )
 }

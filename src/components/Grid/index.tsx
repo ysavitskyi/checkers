@@ -8,8 +8,10 @@ const grid = [...Array(GRID_SIZE ** 2)].map((_, i) => {
   const isEmpty = (((i / GRID_SIZE) ^ 0) + i + 1) % 2 > 0
   const player1 = i < GRID_SIZE * (GRID_SIZE / 2 - 1)
   const player2 = i > GRID_SIZE * (GRID_SIZE / 2 + 1) - 1
-  const occupied: TCellOccupied =
-    (player1 && 'player1') || (player2 && 'player2') || null
+  const occupied =
+    (player1 && ('player1' as const)) ||
+    (player2 && ('player2' as const)) ||
+    null
 
   return {
     id: String(i),
@@ -18,68 +20,125 @@ const grid = [...Array(GRID_SIZE ** 2)].map((_, i) => {
   }
 })
 
-const calcAvailableCells = (
+const calcNextPositions = (
   cellsById: Record<string, ICellState>,
-  id: string
+  id: string,
+  capturingOnly?: boolean
 ) => {
-  const currentCell = cellsById[id]
-  const availableCells: string[] = []
+  // the current cell is certainly occupied
+  type TcurrentCell = ICellState & {
+    occupied: Exclude<ICellState['occupied'], null>
+  }
+  const currentCell = cellsById[id] as TcurrentCell
 
-  const { oppositePlayer, incPos1, incPos2 } = (() => {
-    if (currentCell.occupied === 'player1') {
+  const config = ((
+    occupied: TcurrentCell['occupied']
+  ): {
+    oppositePlayer: TcurrentCell['occupied']
+    increments: { val: number; capturingOnly?: boolean }[]
+  } => {
+    const incPos1 = GRID_SIZE - 1
+    const incPos2 = GRID_SIZE + 1
+    const increments = [
+      { val: incPos1 },
+      { val: incPos2 },
+      { val: -incPos1, capturingOnly: true },
+      { val: -incPos2, capturingOnly: true },
+    ]
+
+    if (occupied === 'player1') {
       return {
-        oppositePlayer: 'player2',
-        incPos1: GRID_SIZE - 1,
-        incPos2: GRID_SIZE + 1,
+        oppositePlayer: 'player2' as const,
+        increments,
       }
     } else {
       return {
-        oppositePlayer: 'player1',
-        incPos1: -(GRID_SIZE - 1),
-        incPos2: -(GRID_SIZE + 1),
+        oppositePlayer: 'player1' as const,
+        increments: increments.map((increment) => ({
+          ...increment,
+          val: -increment.val,
+        })),
       }
     }
-  })()
+  })(currentCell.occupied)
 
-  const checkNextPos = (
+  const getNextPos = (
     currentCell: ICellState,
     increment: number,
-    iteration = 0
-  ) => {
-    const nextPos = +currentCell.id + increment
+    capturingOnly?: boolean,
+    capture?: boolean
+  ): { id: string; capturedId?: string } | undefined => {
+    const nextPos = +currentCell.id + increment + ''
 
+    // check if this pos is present
     if (!cellsById[nextPos]) return
 
-    if (cellsById[nextPos].occupied === null) {
-      availableCells.push(`${nextPos}`)
-    } else if (cellsById[nextPos].occupied === oppositePlayer) {
-      checkNextPos(cellsById[nextPos], increment, iteration++)
+    // check if the next cell is not occupied (need to skip if there's considering capturing)
+    if (cellsById[nextPos].occupied === null && !capture && !capturingOnly) {
+      return { id: nextPos }
+    }
+
+    if (cellsById[nextPos].occupied === null && capture) {
+      return { id: nextPos, capturedId: currentCell.id }
+    }
+
+    // check if the next cell could be captured
+    if (cellsById[nextPos].occupied === config.oppositePlayer && !capture) {
+      return getNextPos(cellsById[nextPos], increment, capturingOnly, true)
     }
   }
 
-  checkNextPos(currentCell, incPos1)
-  checkNextPos(currentCell, incPos2)
+  let capturingPossible = false
 
-  return availableCells
+  return config.increments
+    .map((increment) => {
+      const nextPos = getNextPos(
+        currentCell,
+        increment.val,
+        capturingOnly || increment.capturingOnly
+      )
+
+      if (nextPos?.capturedId) {
+        capturingPossible = true
+      }
+
+      return nextPos
+    })
+    .reduce<
+      | Record<string, { id: string }>
+      | Record<string, { id: string; capturedId: string }>
+    >((acc, nextPos) => {
+      if (!nextPos) return acc
+
+      return {
+        ...acc,
+        ...(capturingPossible
+          ? nextPos.capturedId && { [nextPos.id]: nextPos }
+          : { [nextPos.id]: nextPos }),
+      }
+    }, {})
 }
-
-type TCellOccupied = 'player1' | 'player2' | null
 interface ICellState {
   id: string
-  occupied: TCellOccupied
+  occupied: (typeof grid)[number]['occupied']
+}
+interface IPositionState {
+  id: string
+  capturedId?: string | undefined
 }
 
 const Grid: React.FC = () => {
   const [state, setState] = useState<{
     cellsById: Record<string, ICellState>
     activePieceId: string | null
-    availableCells: string[]
+    nextPositionsById: Record<string, IPositionState> | null
     player1Turn: boolean
   }>({
     cellsById: grid.reduce(
       (acc, { id, isEmpty, occupied }) => ({
         ...acc,
         ...(!isEmpty && {
+          // sanitize empty cells
           [id]: {
             id,
             occupied,
@@ -88,44 +147,62 @@ const Grid: React.FC = () => {
       }),
       {}
     ),
-
     activePieceId: null,
-    availableCells: [],
+    nextPositionsById: null,
     player1Turn: true,
   })
 
   const onCellClick = useCallback((id: string, isPieceTarget?: boolean) => {
     setState((state) => {
+      // set active piece
       if (isPieceTarget) {
-        const availableCells = calcAvailableCells(state.cellsById, id)
+        const nextPositionsById = calcNextPositions(state.cellsById, id)
 
-        return { ...state, activePieceId: id, availableCells }
+        return { ...state, activePieceId: id, nextPositionsById }
       }
 
+      // do nothing if there is no an active piece
       if (!state.activePieceId) {
         return state
       }
 
-      if (state.activePieceId === id) {
-        return { ...state, activePieceId: null, availableCells: [] }
-      }
-
       const activeCell = state.cellsById[state.activePieceId]
+      const capturedPieceId = state.nextPositionsById?.[id].capturedId
+      const nextPositionsById =
+        (capturedPieceId && calcNextPositions(state.cellsById, id, true)) || {}
+      const changeTurn = Object.keys(nextPositionsById).length === 0
+      console.log(changeTurn)
 
+      // change the active piece position
+      // calc the next positons, and if there no ones - change the player turn
       return {
         ...state,
         cellsById: {
           ...state.cellsById,
           [id]: { ...activeCell, id }, // put our active piece to the new cell
           [activeCell.id]: { ...activeCell, occupied: null }, // clear the previous cell
+          ...(capturedPieceId && {
+            [capturedPieceId]: { id: capturedPieceId, occupied: null },
+          }),
         },
-        activePieceId: id,
+        activePieceId: changeTurn ? null : id,
+        player1Turn: changeTurn ? !state.player1Turn : state.player1Turn,
+        nextPositionsById,
       }
     })
   }, [])
 
-  const onGridClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    console.log(event.target)
+  const onGridClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    const target = event.target as HTMLElement
+
+    // reset an activity if we click on non-highlighted cell
+    if (!target.className.includes('cell--highlighted')) {
+      setState((state) => ({
+        ...state,
+        activePieceId: null,
+        nextPositionsById: null,
+      }))
+    }
   }, [])
 
   return (
@@ -151,7 +228,7 @@ const Grid: React.FC = () => {
                 isActive={id === state.activePieceId}
                 occupied={occupied}
                 disabled={disabled}
-                highlighted={state.availableCells.includes(id)}
+                highlighted={!!state.nextPositionsById?.[id]}
               />
             )
           })}
