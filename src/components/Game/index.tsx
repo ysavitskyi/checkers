@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import Grid from 'components/Grid'
+import Piece from 'components/Piece'
 import './index.css'
 
 type IGridState = Exclude<
@@ -36,6 +37,12 @@ const Game = () => {
         />
       </div>
       <div className="game-col game-col--right">
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <h2>Turn:</h2>
+          <div style={{ width: '4em', height: '4em', position: 'relative' }}>
+            <Piece isWhite={historyIndex % 2 === 0} disabled />
+          </div>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <h2>History:</h2>
           &nbsp;

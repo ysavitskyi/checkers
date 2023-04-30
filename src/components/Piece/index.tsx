@@ -2,11 +2,11 @@ import { composeCls } from 'utils'
 import './index.css'
 
 const Piece: React.FC<{
-  onClick: (event: React.MouseEvent<HTMLDivElement>) => void
-  isActive: boolean
   disabled: boolean
-  isWhite?: boolean
-}> = ({ onClick, isWhite, isActive, disabled }) => {
+  isWhite: boolean
+  isActive?: boolean
+  onClick?: (event: React.MouseEvent<HTMLDivElement>) => void
+}> = ({ disabled, isWhite, isActive, onClick }) => {
   return (
     <div
       className={composeCls(['piece'], {
