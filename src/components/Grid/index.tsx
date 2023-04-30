@@ -31,16 +31,17 @@ const grid = [...Array(GRID_SIZE ** 2)].map((_, i) => {
 })
 
 interface IGridProps {
-  addHistoryStep: (state: IGridState, reset?: boolean) => void
-  historyStep?: IGridState
+  addHistoryItem: (state: IGridState) => void
+  historyItem?: IGridState
 }
 interface IGridState {
   cellsById: Record<string, ICellState>
   activePieceId: string | null
   nextPositionsById: Record<string, IPositionState> | null
   step: number
+  historic: boolean
 }
-const Grid: React.FC<IGridProps> = ({ historyStep, addHistoryStep }) => {
+const Grid: React.FC<IGridProps> = ({ historyItem, addHistoryItem }) => {
   const [state, setState] = useState<IGridState>({
     cellsById: grid.reduce(
       (acc, { id, isEmpty, occupied }) => ({
@@ -58,54 +59,52 @@ const Grid: React.FC<IGridProps> = ({ historyStep, addHistoryStep }) => {
     activePieceId: null,
     nextPositionsById: null,
     step: 0,
+    historic: false,
   })
 
-  const onCellClick = useCallback(
-    (id: string, isPieceTarget?: boolean) => {
-      setState((state) => {
-        // set active piece
-        if (isPieceTarget) {
-          const nextPositionsById = calcNextPositions(state.cellsById, id)
+  const onCellClick = useCallback((id: string, isPieceTarget?: boolean) => {
+    setState((state) => {
+      // set active piece
+      if (isPieceTarget) {
+        const nextPositionsById = calcNextPositions(state.cellsById, id)
 
-          return { ...state, activePieceId: id, nextPositionsById }
-        }
+        return { ...state, activePieceId: id, nextPositionsById }
+      }
 
-        // do nothing if there is no an active piece
-        if (!state.activePieceId) {
-          return state
-        }
+      // do nothing if there is no an active piece
+      if (!state.activePieceId) {
+        return state
+      }
 
-        const activeCell = state.cellsById[state.activePieceId]
-        const capturedPieceId = state.nextPositionsById?.[id].capturedId
-        const nextPositionsById =
-          (capturedPieceId && calcNextPositions(state.cellsById, id, true)) ||
-          {}
-        const changeTurn = Object.keys(nextPositionsById).length === 0
+      const activeCell = state.cellsById[state.activePieceId]
+      const capturedPieceId = state.nextPositionsById?.[id].capturedId
+      const nextPositionsById =
+        (capturedPieceId && calcNextPositions(state.cellsById, id, true)) || {}
+      const changeTurn = Object.keys(nextPositionsById).length === 0
 
-        // change the active piece position
-        // calc the next positons, and if there no ones - change the player turn
-        const nextState = {
-          ...state,
-          cellsById: {
-            ...state.cellsById,
-            [id]: { ...activeCell, id }, // put our active piece to the new cell
-            [activeCell.id]: { ...activeCell, occupied: null }, // clear the previous cell
-            ...(capturedPieceId && {
-              [capturedPieceId]: { id: capturedPieceId, occupied: null },
-            }),
-          },
-          activePieceId: changeTurn ? null : id,
-          step: changeTurn ? state.step + 1 : state.step,
-          nextPositionsById,
-        }
+      // change the active piece position
+      // calc the next positons, and if there no ones - change the player turn
+      const nextState = {
+        ...state,
+        cellsById: {
+          ...state.cellsById,
+          [id]: { ...activeCell, id }, // put our active piece to the new cell
+          [activeCell.id]: { ...activeCell, occupied: null }, // clear the previous cell
+          ...(capturedPieceId && {
+            [capturedPieceId]: { id: capturedPieceId, occupied: null },
+          }),
+        },
+        activePieceId: changeTurn ? null : id,
+        step: changeTurn ? state.step + 1 : state.step,
+        historic: false,
+        nextPositionsById,
+      }
 
-        addHistoryStep(nextState, true)
+      // addHistoryItem(nextState)
 
-        return nextState
-      })
-    },
-    [addHistoryStep]
-  )
+      return nextState
+    })
+  }, [])
 
   const onGridClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
     const target = event.target as HTMLElement
@@ -121,16 +120,16 @@ const Grid: React.FC<IGridProps> = ({ historyStep, addHistoryStep }) => {
   }, [])
 
   useEffect(() => {
-    if (state.step === 0) {
-      addHistoryStep(state)
+    if (!state.historic) {
+      addHistoryItem(state)
     }
-  }, [state, addHistoryStep])
+  }, [addHistoryItem, state])
 
   useEffect(() => {
-    if (historyStep) {
-      setState(historyStep)
+    if (historyItem) {
+      setState({ ...historyItem, historic: true })
     }
-  }, [historyStep])
+  }, [historyItem])
 
   return (
     <div className="grid-wrapper">
