@@ -3,3 +3,19 @@
 body {
   font-family: sans-serif;
 }
+
+button {
+  cursor: pointer;
+}
+
+button[disabled] {
+  cursor: default;
+}
+
+.flex {
+  display: flex;
+}
+
+.f-acenter {
+  align-items: center;
+}
