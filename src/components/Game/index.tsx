@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react'
-import Grid from 'components/Grid'
+import Board from 'components/Board'
 import Piece from 'components/Piece'
 import './index.css'
 
-type IGridState = Exclude<
-  React.ComponentProps<typeof Grid>['historyItem'],
+type IBoardState = Exclude<
+  React.ComponentProps<typeof Board>['historyItem'],
   undefined
 >
 
@@ -31,7 +31,7 @@ const Game = () => {
   return (
     <div className="game">
       <div className="game-col game-col--left">
-        <Grid
+        <Board
           addHistoryItem={addHistoryItem}
           historyItem={history[historyIndex]}
         />
@@ -82,10 +82,10 @@ const Game = () => {
 }
 
 const useHistory = () => {
-  const [history, setHistory] = useState<IGridState[]>([])
+  const [history, setHistory] = useState<IBoardState[]>([])
   const [historyIndex, setHistoryIndex] = useState(0)
 
-  const addHistoryItem = useCallback((nextHistoryItem: IGridState) => {
+  const addHistoryItem = useCallback((nextHistoryItem: IBoardState) => {
     setHistory((history) => {
       const lastHistoryItem = history.slice(-1)[0]
 

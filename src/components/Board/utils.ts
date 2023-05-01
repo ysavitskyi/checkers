@@ -1,4 +1,4 @@
-import { GRID_SIZE, ICellState } from '.'
+import { BOARD_SIZE, ICellState } from '.'
 
 const getNextPos = ({
   cellsById,
@@ -59,8 +59,8 @@ export const calcNextPositions = (
     oppositePlayer: TcurrentCell['occupied']
     increments: { val: number; capturingOnly?: boolean }[]
   } => {
-    const incPos1 = GRID_SIZE - 1
-    const incPos2 = GRID_SIZE + 1
+    const incPos1 = BOARD_SIZE - 1
+    const incPos2 = BOARD_SIZE + 1
     const increments = [
       { val: incPos1 },
       { val: incPos2 },

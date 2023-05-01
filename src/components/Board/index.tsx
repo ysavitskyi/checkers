@@ -3,21 +3,21 @@ import Cell from 'components/Cell'
 import { calcNextPositions } from './utils'
 import './index.css'
 
-export const GRID_SIZE = 8
+export const BOARD_SIZE = 8
 
 export interface ICellState {
   id: string
-  occupied: (typeof grid)[number]['occupied']
+  occupied: (typeof board)[number]['occupied']
 }
 export interface IPositionState {
   id: string
   capturedId?: string | undefined
 }
 
-const grid = [...Array(GRID_SIZE ** 2)].map((_, i) => {
-  const isEmpty = (((i / GRID_SIZE) ^ 0) + i + 1) % 2 > 0
-  const player1 = i < GRID_SIZE * (GRID_SIZE / 2 - 1)
-  const player2 = i > GRID_SIZE * (GRID_SIZE / 2 + 1) - 1
+const board = [...Array(BOARD_SIZE ** 2)].map((_, i) => {
+  const isEmpty = (((i / BOARD_SIZE) ^ 0) + i + 1) % 2 > 0
+  const player1 = i < BOARD_SIZE * (BOARD_SIZE / 2 - 1)
+  const player2 = i > BOARD_SIZE * (BOARD_SIZE / 2 + 1) - 1
   const occupied =
     (player1 && ('player1' as const)) ||
     (player2 && ('player2' as const)) ||
@@ -30,20 +30,20 @@ const grid = [...Array(GRID_SIZE ** 2)].map((_, i) => {
   }
 })
 
-interface IGridProps {
-  addHistoryItem: (state: IGridState) => void
-  historyItem?: IGridState
+interface IBoardProps {
+  addHistoryItem: (state: IBoardState) => void
+  historyItem?: IBoardState
 }
-interface IGridState {
+interface IBoardState {
   cellsById: Record<string, ICellState>
   activePieceId: string | null
   nextPositionsById: Record<string, IPositionState> | null
   step: number
   historic: boolean
 }
-const Grid: React.FC<IGridProps> = ({ historyItem, addHistoryItem }) => {
-  const [state, setState] = useState<IGridState>({
-    cellsById: grid.reduce(
+const Board: React.FC<IBoardProps> = ({ historyItem, addHistoryItem }) => {
+  const [state, setState] = useState<IBoardState>({
+    cellsById: board.reduce(
       (acc, { id, isEmpty, occupied }) => ({
         ...acc,
         ...(!isEmpty && {
@@ -106,7 +106,7 @@ const Grid: React.FC<IGridProps> = ({ historyItem, addHistoryItem }) => {
     })
   }, [])
 
-  const onGridClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
+  const onBoardClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
     const target = event.target as HTMLElement
 
     // reset an activity if we click on non-highlighted cell
@@ -132,13 +132,13 @@ const Grid: React.FC<IGridProps> = ({ historyItem, addHistoryItem }) => {
   }, [historyItem])
 
   return (
-    <div className="grid-wrapper">
+    <div className="board-wrapper">
       <div
-        className="grid"
-        style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}
-        onClick={onGridClick}
+        className="board"
+        style={{ gridTemplateColumns: `repeat(${BOARD_SIZE}, 1fr)` }}
+        onClick={onBoardClick}
       >
-        {grid.map(({ id, isEmpty }) => {
+        {board.map(({ id, isEmpty }) => {
           const occupied = state.cellsById[id]?.occupied || null
           const disabled =
             state.step % 2 // player1 turn
@@ -163,4 +163,4 @@ const Grid: React.FC<IGridProps> = ({ historyItem, addHistoryItem }) => {
   )
 }
 
-export default React.memo(Grid)
+export default React.memo(Board)
