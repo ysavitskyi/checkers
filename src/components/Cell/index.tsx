@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import React, { useCallback } from 'react'
 import { composeCls } from 'utils'
 import Piece from 'components/Piece'
 import './index.css'
@@ -38,6 +38,7 @@ const Cell: React.FC<{
       className={composeCls(['cell'], {
         'cell--highlighted': highlighted,
       })}
+      data-id={id}
       onClick={onCellClick}
     >
       {occupied && (
@@ -62,4 +63,4 @@ const Cell: React.FC<{
   )
 }
 
-export default Cell
+export default React.memo(Cell)

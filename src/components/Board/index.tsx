@@ -107,24 +107,30 @@ const Board: React.FC<IBoardProps> = ({ historyItem, addHistoryItem }) => {
   }, [])
 
   const onBoardClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
-    const target = event.target as HTMLElement
+    // const target = event.target as HTMLElement
+    const targetId = (event.target as HTMLElement).dataset.id
 
-    // reset an activity if we click on non-highlighted cell
-    if (!target.className.includes('cell--highlighted')) {
-      setState((state) => ({
-        ...state,
-        activePieceId: null,
-        nextPositionsById: null,
-      }))
-    }
+    // deactivate a piece if we click on non-highlighted cell
+    // in case if there are no mandatory captures
+    // TODO: need to consider the case with mandatory capturing
+    setState((state) => {
+      if (!targetId || !state.nextPositionsById?.[targetId]) {
+        return { ...state, activePieceId: null, nextPositionsById: null }
+      }
+
+      return state
+    })
   }, [])
 
+  // update history in accordance to the state change
   useEffect(() => {
+    console.log('current state: ', state)
     if (!state.historic) {
       addHistoryItem(state)
     }
   }, [addHistoryItem, state])
 
+  // update state in accordance to the historic point
   useEffect(() => {
     if (historyItem) {
       setState({ ...historyItem, historic: true })
