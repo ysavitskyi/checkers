@@ -1,118 +1,102 @@
-import { BOARD_SIZE, ICellState } from '.'
+import { ICellState, ICellStateOccupied } from '.'
+import { Dictionary } from 'utils'
 
-const getNextPos = ({
-  cellsById,
-  currentCell,
-  increment,
-  oppositePlayer,
-  capturingOnly,
-  capture,
-}: {
-  cellsById: Record<string, ICellState>
-  currentCell: ICellState
-  increment: number
-  oppositePlayer: string
-  capturingOnly?: boolean
-  capture?: boolean
-}): { id: string; capturedId?: string } | undefined => {
-  const nextPos = +currentCell.id + increment + ''
+export const BOARD_SIZE = 8
 
-  // check if this pos is present
-  if (!cellsById[nextPos]) return
+const pieceNavConfig = (() => {
+  const incPos1 = BOARD_SIZE - 1
+  const incPos2 = BOARD_SIZE + 1
+  const increments = [
+    { val: incPos1 }, // forward left
+    { val: incPos2 }, // forward right
+    { val: -incPos1, capturingOnly: true }, // backward left
+    { val: -incPos2, capturingOnly: true }, // backward right
+  ]
 
-  // check if the next cell is not occupied (need to skip if there's considering capturing)
-  if (cellsById[nextPos].occupied === null && !capture && !capturingOnly) {
-    return { id: nextPos }
+  return {
+    player1: {
+      oppositePlayer: 'player2' as const,
+      increments,
+    },
+    player2: {
+      oppositePlayer: 'player1' as const,
+      increments: increments.map((increment) => ({
+        ...increment,
+        val: -increment.val,
+      })),
+    },
   }
+})()
 
-  if (cellsById[nextPos].occupied === null && capture) {
-    return { id: nextPos, capturedId: currentCell.id }
-  }
+export const getPlayerByStep = (step: number) =>
+  step % 2 === 0 ? 'player1' : 'player2'
 
-  // check if the next cell could be captured
-  if (cellsById[nextPos].occupied === oppositePlayer && !capture) {
-    return getNextPos({
-      cellsById,
-      currentCell: cellsById[nextPos],
-      increment,
-      oppositePlayer,
-      capturingOnly,
-      capture: true,
-    })
-  }
+export const getOppositePlayer = (player: 'player1' | 'player2') =>
+  player === 'player1' ? 'player2' : 'player1'
+
+export const getRegularSteps = (
+  cellsById: Dictionary<ICellState>,
+  cell: ICellStateOccupied
+) => {
+  const curPieceNavConfig = pieceNavConfig[cell.occupied]
+
+  return curPieceNavConfig.increments.reduce<string[]>((acc, increment) => {
+    const nextPos = +cell.id + increment.val + ''
+
+    // check if this pos is present
+    if (!increment.capturingOnly && cellsById[nextPos]?.occupied === null) {
+      return [...acc, nextPos]
+    }
+
+    return acc
+  }, [])
 }
 
-export const calcNextPositions = (
-  cellsById: Record<string, ICellState>,
-  id: string,
-  capturingOnly?: boolean
+export const getMandatorySteps = (
+  cellsById: Dictionary<ICellState>,
+  cell: ICellStateOccupied
 ) => {
-  // the current cell is certainly occupied
-  type TcurrentCell = ICellState & {
-    occupied: Exclude<ICellState['occupied'], null>
-  }
-  const currentCell = cellsById[id] as TcurrentCell
+  const curPieceNavConfig = pieceNavConfig[cell.occupied]
 
-  const config = ((
-    occupied: TcurrentCell['occupied']
-  ): {
-    oppositePlayer: TcurrentCell['occupied']
-    increments: { val: number; capturingOnly?: boolean }[]
-  } => {
-    const incPos1 = BOARD_SIZE - 1
-    const incPos2 = BOARD_SIZE + 1
-    const increments = [
-      { val: incPos1 },
-      { val: incPos2 },
-      { val: -incPos1, capturingOnly: true },
-      { val: -incPos2, capturingOnly: true },
-    ]
+  return curPieceNavConfig.increments.reduce<
+    { id: string; capturedId: string }[]
+  >((acc, increment) => {
+    const nextPos = +cell.id + increment.val + ''
+    const nextNextPos = +cell.id + increment.val * 2 + ''
 
-    if (occupied === 'player1') {
-      return {
-        oppositePlayer: 'player2' as const,
-        increments,
-      }
-    } else {
-      return {
-        oppositePlayer: 'player1' as const,
-        increments: increments.map((increment) => ({
-          ...increment,
-          val: -increment.val,
-        })),
-      }
+    // check if this pos is present
+    if (
+      cellsById[nextPos]?.occupied === curPieceNavConfig.oppositePlayer &&
+      cellsById[nextNextPos]?.occupied === null
+    ) {
+      return [...acc, { id: nextNextPos, capturedId: nextPos }]
     }
-  })(currentCell.occupied)
 
-  let capturingPossible = false
+    return acc
+  }, [])
+}
 
-  return config.increments
-    .map((increment) => {
-      const nextPos = getNextPos({
+export const getAllMandatorySteps = (
+  cellsById: Dictionary<ICellState>,
+  occupied: ICellStateOccupied['occupied']
+) => {
+  return Object.values(cellsById).reduce<
+    Dictionary<ReturnType<typeof getMandatorySteps>>
+  >((acc, cell) => {
+    if (cell.occupied === occupied) {
+      const cellMandatorySteps = getMandatorySteps(
         cellsById,
-        currentCell,
-        increment: increment.val,
-        oppositePlayer: config.oppositePlayer,
-        capturingOnly: capturingOnly || increment.capturingOnly,
-      })
-
-      if (nextPos?.capturedId) {
-        capturingPossible = true
-      }
-
-      return nextPos
-    })
-    .reduce<
-      | Record<string, { id: string }>
-      | Record<string, { id: string; capturedId: string }>
-    >((acc, nextPos) => {
-      if (!nextPos) return acc
+        cell as ICellStateOccupied
+      )
 
       return {
         ...acc,
-        ...(capturingPossible
-          ? nextPos.capturedId && { [nextPos.id]: nextPos }
-          : { [nextPos.id]: nextPos }),
+        ...(cellMandatorySteps.length && {
+          [cell.id]: cellMandatorySteps,
+        }),
       }
-    }, {})
+    }
+
+    return acc
+  }, {})
 }

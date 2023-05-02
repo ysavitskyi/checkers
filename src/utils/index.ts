@@ -1,6 +1,10 @@
+export interface Dictionary<T> {
+  [key: string]: T
+}
+
 export const composeCls = (
   cls: string[],
-  clsComputable: Record<string, boolean | undefined>
+  clsComputable: Dictionary<boolean | undefined>
 ) => {
   return Object.entries(clsComputable)
     .reduce((acc, [key, value]) => {

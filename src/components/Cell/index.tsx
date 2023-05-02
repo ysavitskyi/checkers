@@ -16,6 +16,7 @@ const Cell: React.FC<{
     (event: React.MouseEvent<HTMLDivElement>) => {
       if (highlighted) {
         onClick(id)
+        event.stopPropagation()
       }
     },
     [id, onClick, highlighted]
@@ -53,6 +54,11 @@ const Cell: React.FC<{
       {/* <sub
         style={{
           position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          display: 'flex',
+          alignItems: 'center',
           color: 'green',
           pointerEvents: 'none',
         }}
